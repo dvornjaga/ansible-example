@@ -1,0 +1,16 @@
+- *.lock
+- *.pid
+- *.sock
+- *.temp
+- *.tmp
+- *lost+found*
+- /dev
+- /media
+- /mnt
+- /proc
+- /run
+- /sys
+- /temp
+- /tmp
+- /var/lock
+- /var/run/

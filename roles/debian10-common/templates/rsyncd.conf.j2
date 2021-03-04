@@ -1,0 +1,18 @@
+log file = /var/log/rsyncd.log
+pid file = /var/run/rsyncd.pid
+lock file = /var/run/rsync.lock
+uid = root
+gid = root
+auth users = backuppc
+secrets file = /etc/rsyncd.secrets
+hosts allow = {{ backuppc_ip }}
+exclude from = /etc/rsyncd.exclude
+
+[VeeamISO]
+path = /mnt/store/VeeamBackup
+read only = true
+exclude = Backup*
+
+[VeeamBackup]
+path = /mnt/store/VeeamBackup/{{ ansible_hostname }} BackupJob1
+read only = true

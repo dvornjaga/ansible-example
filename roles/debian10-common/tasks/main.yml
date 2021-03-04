@@ -1,0 +1,68 @@
+---
+- name: Set timezone to Europe/Moscow
+  timezone: name=Europe/Moscow
+- name: Update apt cache
+  apt: update_cache=yes
+- name: Update all packages to the latest version
+  apt: upgrade=dist
+- name: Install common dependencies
+  apt:
+    pkg:
+      - wget
+      - gnupg2
+      - sudo
+      - vim
+      - unattended-upgrades
+      - bash-completion
+      - rsync
+      - tuned
+      - tuned-utils
+      - tuned-utils-systemtap
+      - mc
+      - net-tools
+      - htop
+      - sysstat
+      - parted
+    state: latest
+- name: Set latency-performance profile
+  shell: tuned-adm profile latency-performance
+- name: Copy 20auto-upgrades config
+  copy:
+    src: 20auto-upgrades
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+- name: Disable vim visual mode for root user
+  lineinfile: path=/root/.vimrc line="set mouse-=a" create=yes
+- name: Ensure rsync service is enabled and started
+  service: name=rsync enabled=yes state=started
+- name: Copy rsyncd.conf
+  template:
+    src: rsyncd.conf.j2
+    dest: /etc/rsyncd.conf
+  notify:
+    - restart rsync
+- name: Check if /etc/rsyncd.secrets already exists
+  stat:
+   path: /etc/rsyncd.secrets
+  register: rsyncd_secrets
+- name: Check if /etc/rsyncd.secrets already contains credentials
+  lineinfile:
+    path: /etc/rsyncd.secrets
+    regexp: '^backuppc:'
+    state: absent
+  check_mode: yes
+  changed_when: false
+  register: backuppc_credentials
+  when: rsyncd_secrets.stat.exists
+- name: Add backuppc user to rsync
+  lineinfile: path=/etc/rsyncd.secrets line="backuppc:{{ backuppc_password }}" create=yes
+  notify:
+    - restart rsync
+  when: not rsyncd_secrets.stat.exists or not backuppc_credentials.found
+- name: Change /etc/rsyncd.secrets permissions
+  file: path=/etc/rsyncd.secrets mode='600'
+- name: Copy rsyncd.exclude
+  copy:
+    src: rsyncd.exclude
+    dest: /etc/rsyncd.exclude
+  notify:
+    - restart rsync

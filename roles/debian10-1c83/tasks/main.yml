@@ -1,0 +1,79 @@
+---
+- name: Add nonfree repo
+  apt_repository:
+    repo: deb https://mirror.yandex.ru/debian/ stable main contrib non-free
+    state: present
+- name: Update apt cache
+  apt: update_cache=yes
+- name: Install dependencies for 1c:Enterprise
+  apt:
+    pkg:
+      - imagemagick
+      - unixodbc
+      - ttf-mscorefonts-installer
+    state: latest
+- name: Search for old 1C debs in /tmp
+  find:
+    paths: /tmp
+    patterns: "1c-enterprise8*.deb"
+  register: files_to_delete
+- name: Remove old 1C debs from /tmp
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ files_to_delete.files }}"
+- name: Unarchive 1C packages
+  unarchive: src="{{ archive_1c }}" dest=/tmp/
+- name: Find 1c-enterprise83-common.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-common_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83-common.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Find 1c-enterprise83-common-nls.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-common-nls_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83-common-nls.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Find 1c-enterprise83-server.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-server_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83-server.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Find 1c-enterprise83-server-nls.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-server-nls_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83-server-nls.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Find 1c-enterprise83-ws.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-ws_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83-ws.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Find 1c-enterprise83-ws-nls.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-ws-nls_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83ws-nls.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Find 1c-enterprise83-crs.deb package
+  find: paths="/tmp" patterns="1c-enterprise83-crs_*.deb" recurse=yes
+  register: deb_1c
+- name: Install 1c-enterprise83-crs.deb package
+  apt: deb="{{ deb_1c.files[0].path }}"
+- name: Ensure 1c-server service is enabled and started
+  service: name=srv1cv83 enabled=yes state=started
+- name: Check if HASP driver archive is presented
+  local_action: stat path={{ archive_hasp }}
+  register: stat_archive_hasp
+- name: Unarchive HASP driver package if presented
+  unarchive: src="{{ archive_hasp }}" dest=/tmp/
+  when: stat_archive_hasp.stat.exists
+- name: Search for HASP driver directory in /tmp
+  find:
+    paths: /tmp
+    file_type: directory
+    patterns: "aksusbd-*"
+  register: hasp_dir
+  when: stat_archive_hasp.stat.exists
+- name: Install HASP driver if package was presented
+  command: "{{ hasp_dir.files[0].path }}/dinst {{ hasp_dir.files[0].path }}"
+  when: stat_archive_hasp.stat.exists

@@ -1,0 +1,46 @@
+---
+- name: Add PostgresPro apt key
+  apt_key: url=http://1c.postgrespro.ru/keys/GPG-KEY-POSTGRESPRO-1C state=present
+- name: Add PostgresPro repo
+  apt_repository:
+    repo: deb http://repo.postgrespro.ru/pg1c-archive/pg1c-12.2/debian/ buster main
+    state: present
+- name: Update apt cache
+  apt: update_cache=yes
+- name: Install dependencies and PostgresPro
+  apt:
+    pkg:
+      - libpq-dev
+      - python-psycopg2
+      - postgrespro-1c-12-server
+      - postgrespro-1c-12-contrib
+    state: latest
+- name: Ensure a locale exists
+  locale_gen:
+    name: ru_RU.UTF-8
+    state: present
+- name: Check if PostgreSQL database is initialized.
+  stat:
+    path: "/var/lib/pgpro/1c-12/data/PG_VERSION"
+  register: pgdata_dir_version
+- name: Ensure PostgreSQL database is initialized.
+  command: "/opt/pgpro/1c-12/bin/pg-setup initdb --locale=ru_RU.UTF-8"
+  when: not pgdata_dir_version.stat.exists
+- name: Copy new postgresql config
+  copy:
+    src: postgresql.conf
+    dest: /var/lib/pgpro/1c-12/data/postgresql.conf
+  notify:
+    - restart postgres
+- name: Copy new pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: /var/lib/pgpro/1c-12/data/pg_hba.conf
+  notify:
+    - restart postgres
+- name: Ensure postgresql service is enabled and started
+  service: name=postgrespro-1c-12 enabled=yes state=started
+- name: Create 1C SQL user
+  postgresql_user: login_unix_socket=/tmp name=postgres password="{{ postgres_password }}" expires=infinity
+  become: true
+  become_user: postgres

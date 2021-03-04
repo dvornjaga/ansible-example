@@ -1,0 +1,3 @@
+---
+archive_1c: "{{ lookup('pipe', 'ls -1 {{ role_path }}/files/deb64_*.tar.gz') }}"
+archive_hasp: "{{ lookup('pipe', 'ls -1 {{ role_path }}/files/aksusbd-*.tar.gz', errors='ignore') }}"
